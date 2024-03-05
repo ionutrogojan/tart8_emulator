@@ -2,7 +2,7 @@
 #include <raylib.h>
 
 #define TILE 8
-#define SCALE 4
+#define SCALE 6
 #define WIDTH 24
 #define HEIGHT 16
 
@@ -25,6 +25,12 @@
 #define L_MAGENTA    0xd941b3ff
 
 int main(void) {
+
+	Vector4 normLWhite = ColorNormalize(GetColor(L_WHITE));
+	Vector4 normDGreen = ColorNormalize(GetColor(D_GREEN));
+	Vector4 normDRed = ColorNormalize(GetColor(D_RED));
+
+	void *fgColourPtr = (void *)&normDGreen;
 	// Screen Buffer
 	char buffer[WIDTH * HEIGHT];
 	int cursorPosition = 0;
@@ -32,23 +38,22 @@ int main(void) {
 	int i = 0;
 	int y = 0, x = 0;
 
-	// SetTraceLogLevel(LOG_NONE);
+	buffer[0] = 0;
+
+	SetTraceLogLevel(LOG_NONE);
 	InitWindow((WIDTH * TILE * SCALE), (HEIGHT * TILE * SCALE), "Tart8");
 
 	Image fontMap = LoadImage("./font.png");
 	Texture2D fontAtlas = LoadTextureFromImage(fontMap);
-
-	buffer[0] = 0;
-
 	UnloadImage(fontMap);
 
 	// Load custom shader
-	Shader shader = LoadShader(0, "./shader/recolour.frag");
+	Shader shader = LoadShader(0, "./shader/recolor.frag");
 	SetShaderValue(shader, GetShaderLocation(shader, "textureSampler"), (int[1]){0}, SHADER_UNIFORM_INT);
 
 	while (!WindowShouldClose()) {
 		BeginDrawing();
-		ClearBackground(GetColor(L_BLACK));
+		ClearBackground(GetColor(D_BLACK));
 
 		if ((keyPressed = GetKeyPressed()) != 0) {
 			switch (keyPressed) {
@@ -95,17 +100,21 @@ int main(void) {
 				y++;
 				x = 0;
 			} else {
+			
+				if (x < 3 && y == 0) {
+					fgColourPtr = (void *)&normLWhite;
+				} else {
+					fgColourPtr = (void *)&normDGreen;
+				}
 	
-    BeginShaderMode(shader);
-		SetShaderValue(shader, GetShaderLocation(shader, "replaceColor"), (float[4]){0.0f, 0.0f, 0.0f, 1.0f}, SHADER_UNIFORM_VEC4);
-		SetShaderValue(shader, GetShaderLocation(shader, "newColor"), (float[4]){1.0f, 0.0f, 0.0f, 1.0f}, SHADER_UNIFORM_VEC4);
-			// DrawTextureRec(fontAtlas, (Rectangle){ ((buffer[i] - 32) % 16) * TILE, (int)((buffer[i] - 32) / 16) * TILE, TILE, TILE }, (Vector2){ x * TILE, y * TILE }, WHITE);
-			DrawTexturePro(fontAtlas, (Rectangle){((buffer[i] - 32) % 16) * TILE, (int)((buffer[i] - 32) / 16) * TILE, TILE, TILE}, (Rectangle){ x * TILE * SCALE, y * TILE * SCALE, TILE * SCALE, TILE * SCALE }, (Vector2){ 0, 0}, 0, WHITE);
-	EndShaderMode();
-				x++;
-			}
+    	BeginShaderMode(shader);
+			SetShaderValue(shader, GetShaderLocation(shader, "newColor"), fgColourPtr, SHADER_UNIFORM_VEC4);
+				DrawTexturePro(fontAtlas, (Rectangle){((buffer[i] - 32) % 16) * TILE, (int)((buffer[i] - 32) / 16) * TILE, TILE, TILE}, (Rectangle){ x * TILE * SCALE, y * TILE * SCALE, TILE * SCALE, TILE * SCALE }, (Vector2){0, 0}, 0, WHITE);
 			// printf("Drawing Char %c\n", buffer[i]);
 			// fflush(stdout);
+		EndShaderMode();
+				x++;
+			}
 			i++;
 		}
 		i = 0;
